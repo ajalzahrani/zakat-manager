@@ -1,0 +1,46 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model ZakatYear {
+  id        String      @id @default(cuid())
+  year      Int
+  entries   ZakatEntry[]
+  status    YearStatus  @default(OPEN)
+  closedAt  DateTime?
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  @@unique([year])
+}
+
+model ZakatEntry {
+  id        String     @id @default(cuid())
+  name      String
+  assetType AssetType
+  amount    Float
+  yearId    String
+  year      ZakatYear  @relation(fields: [yearId], references: [id])
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+enum AssetType {
+  INCOME
+  SAVINGS
+  GOLD
+  SILVER
+  STOCKS
+  BUSINESS_ASSETS
+  OTHER
+}
+
+enum YearStatus {
+  OPEN
+  CLOSED
+} 

@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Add these lines to .gitignore
+/prisma/dev.db
+/prisma/dev.db-journal
+prisma/prisma/prod.db
+package-lock.json
