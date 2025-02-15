@@ -116,6 +116,10 @@ export default function PaidYear({
 
   if (isLoading) return <div>Loading...</div>;
 
+  const totalPaid = entries
+    .reduce((sum, entry) => sum + entry.amount, 0)
+    .toLocaleString("en-US", { minimumFractionDigits: 2 });
+
   return (
     <div className="p-8">
       <div className="flex justify-between items-center mb-8">
@@ -244,11 +248,11 @@ export default function PaidYear({
           <div>
             <div className="mb-8 p-6 bg-gray-50 rounded-lg shadow-sm border">
               <h3 className="text-lg font-semibold mb-3">Summary</h3>
-              <p className="text-2xl font-bold">
-                Total Paid: $
-                {entries
-                  .reduce((sum, entry) => sum + entry.amount, 0)
-                  .toLocaleString("en-US", { minimumFractionDigits: 2 })}
+              <p className="text-2xl font-bold">Total Paid: ${totalPaid}</p>
+              <p className="text-xl text-gray-600 mt-2">
+                Remaining Zakat: $
+                {parseFloat(resolvedSearchParams.zakatAmount) -
+                  parseFloat(totalPaid)}
               </p>
               <p className="text-xl text-gray-600 mt-2">
                 Zakat Due: ${resolvedSearchParams.zakatAmount}
