@@ -12,6 +12,11 @@ export async function GET() {
             amount: true,
           },
         },
+        paidEntries: {
+          select: {
+            amount: true,
+          },
+        },
       },
       orderBy: {
         year: "desc",

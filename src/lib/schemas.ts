@@ -40,3 +40,20 @@ export const zakatEntrySchema = z.object({
 });
 
 export type ZakatEntryData = z.infer<typeof zakatEntrySchema>;
+
+export const paidEntrySchema = z.object({
+  id: z.string().optional(),
+  name: z.string().min(2, "Name must be at least 2 characters"),
+  amount: z
+    .string()
+    .min(1, "Amount is required")
+    .transform((val) => {
+      const parsed = parseFloat(val);
+      if (isNaN(parsed)) {
+        throw new Error("Amount must be a valid number");
+      }
+      return parsed;
+    }),
+});
+
+export type PaidEntryData = z.infer<typeof paidEntrySchema>;

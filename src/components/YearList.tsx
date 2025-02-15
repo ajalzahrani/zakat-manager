@@ -8,6 +8,9 @@ type YearSummary = {
   year: number;
   status: "OPEN" | "CLOSED";
   closedAt: string | null;
+  paidEntries: {
+    amount: number;
+  }[];
   entries: {
     amount: number;
   }[];
@@ -43,11 +46,12 @@ export default function YearList() {
   return (
     <div className="w-full max-w-2xl">
       <div className="bg-white shadow-sm rounded-lg">
-        <div className="grid grid-cols-4 p-4 font-semibold border-b">
+        <div className="grid grid-cols-5 p-4 font-semibold border-b">
           <div>Year</div>
           <div>Total Assets</div>
           <div>Zakat Due</div>
           <div>Status</div>
+          <div>Paid</div>
         </div>
         {years.map((yearData) => {
           const totalAmount = yearData.entries.reduce(
@@ -59,16 +63,15 @@ export default function YearList() {
           return (
             <div
               key={yearData.id}
-              className="grid grid-cols-4 p-4 border-b hover:bg-gray-50 cursor-pointer"
-              onClick={() => router.push(`/zakat/${yearData.id}`)}>
+              className="grid grid-cols-5 p-4 border-b hover:bg-gray-50 cursor-pointer">
               <div>{yearData.year}</div>
-              <div>
+              <div onClick={() => router.push(`/zakat/${yearData.id}`)}>
                 $
                 {totalAmount.toLocaleString("en-US", {
                   minimumFractionDigits: 2,
                 })}
               </div>
-              <div>
+              <div onClick={() => router.push(`/zakat/${yearData.id}`)}>
                 $
                 {zakatAmount.toLocaleString("en-US", {
                   minimumFractionDigits: 2,
@@ -88,6 +91,22 @@ export default function YearList() {
                     {new Date(yearData.closedAt).toLocaleDateString()}
                   </span>
                 )}
+              </div>
+              <div
+                className="pl-2"
+                onClick={() =>
+                  router.push(`/paid/${yearData.id}?zakatAmount=${zakatAmount}`)
+                }>
+                {yearData.paidEntries.reduce(
+                  (sum, entry) => sum + entry.amount,
+                  0
+                )
+                  ? `$${yearData.paidEntries
+                      .reduce((sum, entry) => sum + entry.amount, 0)
+                      .toLocaleString("en-US", {
+                        minimumFractionDigits: 2,
+                      })}`
+                  : "$0"}
               </div>
             </div>
           );
