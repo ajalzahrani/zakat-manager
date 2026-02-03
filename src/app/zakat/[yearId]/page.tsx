@@ -25,7 +25,10 @@ export default function ZakatYear({
   const [editingEntry, setEditingEntry] = useState<ZakatEntryData | null>(null);
   const router = useRouter();
   const [submitError, setSubmitError] = useState<string | null>(null);
-
+  const [showCopyEntriesModal, setShowCopyEntriesModal] = useState<boolean>(false);
+  const [availableYears, setAvailableYears] = useState<Array<{ id: string; year: number; status: string }>>([]);
+  const [isLoadingYears, setIsLoadingYears] = useState<boolean>(false);
+  const [isCopying, setIsCopying] = useState<boolean>(false);
   const {
     register,
     handleSubmit,
@@ -152,6 +155,61 @@ export default function ZakatYear({
     }
   };
 
+  const fetchAvailableYears = async () => {
+    setIsLoadingYears(true);
+    try {
+      const response = await fetch("/api/zakat-year/summary");
+      const data = await response.json();
+      // Filter out the current year
+      const filtered = data.filter((year: { id: string }) => year.id !== resolvedParams.yearId);
+      setAvailableYears(filtered);
+    } catch (error) {
+      console.error("Failed to fetch years:", error);
+      setSubmitError("Failed to fetch years");
+    } finally {
+      setIsLoadingYears(false);
+    }
+  };
+
+  const handleCopyEntries = async (sourceYearId: string) => {
+    setIsCopying(true);
+    setSubmitError(null);
+    try {
+      const response = await fetch(
+        `/api/zakat-year/${resolvedParams.yearId}/copy-entries`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ sourceYearId }),
+        }
+      );
+
+      const responseData = await response.json();
+
+      if (!response.ok) {
+        throw new Error(responseData.error || "Failed to copy entries");
+      }
+
+      setShowCopyEntriesModal(false);
+      fetchYearData();
+      alert(`Successfully copied ${responseData.count} entries!`);
+    } catch (error: Error | unknown) {
+      console.error("Failed to copy entries:", error);
+      setSubmitError(
+        error instanceof Error ? error.message : "Failed to copy entries"
+      );
+    } finally {
+      setIsCopying(false);
+    }
+  };
+
+  const handleOpenCopyModal = () => {
+    setShowCopyEntriesModal(true);
+    fetchAvailableYears();
+  };
+
   if (isLoading) return <div>Loading...</div>;
 
   return (
@@ -168,11 +226,19 @@ export default function ZakatYear({
           </h1>
         </div>
         {yearData?.status === YearStatus.OPEN ? (
+          
+          <div className="flex gap-2">
+          <button
+              onClick={handleOpenCopyModal}
+              className="bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-600">
+              Copy entries
+            </button>
           <button
             onClick={handleCloseYear}
             className="bg-green-500 text-white py-2 px-4 rounded-md hover:bg-green-600">
             Close & Finalize Year
           </button>
+          </div>
         ) : (
           <span
             className={`px-4 py-2 rounded-md ${
@@ -200,21 +266,20 @@ export default function ZakatYear({
             <h3 className="text-lg font-semibold mb-3">Final Summary</h3>
             <p className="text-2xl font-bold">
               Total Assets: $
-              {entries
-                .reduce((sum, entry) => sum + entry.amount, 0)
+              {(entries?.reduce((sum, entry) => sum + entry.amount, 0) ?? 0)
                 .toLocaleString("en-US", { minimumFractionDigits: 2 })}
             </p>
             <p className="text-xl text-gray-600 mt-2">
               Zakat Due: $
               {(
-                entries.reduce((sum, entry) => sum + entry.amount, 0) * 0.025
+                entries?.reduce((sum, entry) => sum + entry.amount, 0) ?? 0 * 0.025
               ).toLocaleString("en-US", { minimumFractionDigits: 2 })}
             </p>
           </div>
 
           <h2 className="text-xl font-semibold mb-4">All Entries</h2>
           <div className="space-y-4">
-            {entries.map((entry) => (
+            {entries?.map((entry) => (
               <div key={entry.id} className="p-4 border rounded-md shadow-sm">
                 <div className="flex justify-between items-start">
                   <div>
@@ -311,14 +376,14 @@ export default function ZakatYear({
               <p className="text-2xl font-bold">
                 Total Zakat Value: $
                 {entries
-                  .reduce((sum, entry) => sum + entry.amount, 0)
+                  ?.reduce((sum, entry) => sum + entry.amount, 0) ?? 0
                   .toLocaleString("en-US", { minimumFractionDigits: 2 })}
               </p>
             </div>
 
             <h2 className="text-xl font-semibold mb-4">Entries</h2>
             <div className="space-y-4">
-              {entries.map((entry) => (
+              {entries?.map((entry) => (
                 <div
                   key={entry.id}
                   className="p-4 border rounded-md shadow-sm hover:shadow-md transition-shadow">
@@ -348,7 +413,7 @@ export default function ZakatYear({
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleDelete(entry?.id ?? "");
+                            handleDelete(entry.id ?? "");
                           }}
                           className="text-red-500 hover:text-red-600">
                           Delete
@@ -362,6 +427,72 @@ export default function ZakatYear({
           </div>
         </div>
       )}
+
+      {/* Copy Entries Modal */}
+      {showCopyEntriesModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-2xl font-bold">Copy Entries from Year</h2>
+              <button
+                onClick={() => setShowCopyEntriesModal(false)}
+                className="text-gray-500 hover:text-gray-700 text-2xl">
+                ×
+              </button>
+            </div>
+            
+            <p className="text-gray-600 mb-4">
+              Select a year to copy its entries to the current year ({yearData?.year}):
+            </p>
+
+            {submitError && (
+              <div className="text-red-500 text-sm mb-4">{submitError}</div>
+            )}
+
+            {isLoadingYears ? (
+              <div className="text-center py-8">Loading years...</div>
+            ) : availableYears.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                No other years available to copy from.
+              </div>
+            ) : (
+              <div className="space-y-2 max-h-96 overflow-y-auto">
+                {availableYears.map((year) => (
+                  <button
+                    key={year.id}
+                    onClick={() => handleCopyEntries(year.id)}
+                    disabled={isCopying}
+                    className="w-full text-left p-4 border rounded-md hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <span className="font-semibold">Year {year.year}</span>
+                        <span className={`ml-2 px-2 py-1 text-xs rounded ${
+                          year.status === "CLOSED"
+                            ? "bg-green-100 text-green-800"
+                            : "bg-gray-100 text-gray-800"
+                        }`}>
+                          {year.status}
+                        </span>
+                      </div>
+                      {isCopying && <span className="text-sm text-gray-500">Copying...</span>}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={() => setShowCopyEntriesModal(false)}
+                disabled={isCopying}
+                className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed">
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      
     </div>
   );
 }

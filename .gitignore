@@ -44,4 +44,6 @@ next-env.d.ts
 /prisma/dev.db
 /prisma/dev.db-journal
 prisma/prisma/prod.db
+prisma/prisma/prod.backup.db
 package-lock.json
+src/app/api/zakat-year/\[yearId]/copy-entries/route.ts
